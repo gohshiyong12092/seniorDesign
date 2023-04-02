@@ -1,0 +1,10 @@
+Reading 40 bytes:
+0.000000 3366.998000
+Reading 40 bytes:
+0.000000 3390.073000
+Reading 40 bytes:
+0.000000 3363.259000
+Reading 40 bytes:
+0.000000 3342.635000
+Reading 40 bytes:
+0.000000 3429.879000
